@@ -11,56 +11,44 @@
 
 #!/bin/bash
 
-# AWS CLI command to fetch metrics
-get_metric_statistics() {
-    aws cloudwatch get-metric-statistics \
-        --metric-name "$1" \
-        --start-time "$(date -u -d '1 hour ago' +"%Y-%m-%dT%H:%M:%SZ")" \
-        --end-time "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-        --period 60 \
-        --namespace AWS/EC2 \
-        --statistics Average \
-        --dimensions Name=InstanceId,Value="$INSTANCE_ID" \
-        --output json
-}
+#!/bin/bash
 
-# File path for the combined CSV file
+# Define the instance ID and region
+INSTANCE_ID="i-00034a2e6c772d806"
+REGION="us-east-1"  # Update this with your AWS region
+
+# Define the start and end times (past hour)
+END_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+START_TIME=$(date -u -d "-1 hour" +"%Y-%m-%dT%H:%M:%SZ")
+
+# Output CSV file
 CSV_FILE="ec2_metrics.csv"
 
-# Check if the CSV file already exists; if not, create it with the headers
-if [[ ! -f "$CSV_FILE" ]]; then
-    echo "Timestamp,CPUUtilization,NetworkIn,NetworkOut" > "$CSV_FILE"
+# Function to fetch metric statistics
+fetch_metric() {
+    local METRIC_NAME=$1
+    local UNIT=$2
+    aws cloudwatch get-metric-statistics --metric-name $METRIC_NAME --start-time $START_TIME --end-time $END_TIME --period 3600 --namespace AWS/EC2 --statistics Average --dimensions Name=InstanceId,Value=$INSTANCE_ID --region $REGION --output json | jq -r --arg UNIT "$UNIT" '.Datapoints | sort_by(.Timestamp) | last | .Timestamp + "," + (.Average|tostring) + "," + $UNIT'
+}
+
+# Fetch metrics
+CPU_UTILIZATION=$(fetch_metric "CPUUtilization" "Percent")
+NETWORK_IN=$(fetch_metric "NetworkIn" "Bytes")
+NETWORK_OUT=$(fetch_metric "NetworkOut" "Bytes")
+
+# Extracting values and timestamp from the outputs
+TIMESTAMP=$(echo $CPU_UTILIZATION | cut -d ',' -f 1)
+CPU_VALUE=$(echo $CPU_UTILIZATION | cut -d ',' -f 2)
+NETWORK_IN_VALUE=$(echo $NETWORK_IN | cut -d ',' -f 2)
+NETWORK_OUT_VALUE=$(echo $NETWORK_OUT | cut -d ',' -f 2)
+
+# Check if the CSV file exists and has a header
+if [ ! -f $CSV_FILE ]; then
+    echo "Timestamp,CPUUtilization,NetworkIn,NetworkOut" > $CSV_FILE
 fi
 
-# Fetching the instance ID (replace with your method of obtaining the instance ID)
-INSTANCE_ID="i-00034a2e6c772d806"
+# Append data to the CSV file
+echo "$TIMESTAMP,$CPU_VALUE,$NETWORK_IN_VALUE,$NETWORK_OUT_VALUE" >> $CSV_FILE
 
-# Get CPU Utilization
-cpu_data=$(get_metric_statistics "CPUUtilization")
-cpu_average=$(echo "$cpu_data" | jq -r '.Datapoints | sort_by(.Timestamp) | last(.[]).Average // empty')
-
-# Get NetworkIn
-network_in_data=$(get_metric_statistics "NetworkIn")
-network_in_average=$(echo "$network_in_data" | jq -r '.Datapoints | sort_by(.Timestamp) | last(.[]).Average // empty')
-
-# Get NetworkOut
-network_out_data=$(get_metric_statistics "NetworkOut")
-network_out_average=$(echo "$network_out_data" | jq -r '.Datapoints | sort_by(.Timestamp) | last(.[]).Average // empty')
-
-# Timestamp for the metrics
-timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-# Check if any of the metrics are empty; if so, default to "N/A"
-cpu_average=${cpu_average:-N/A}
-network_in_average=${network_in_average:-N/A}
-network_out_average=${network_out_average:-N/A}
-
-# Append metrics to CSV file
-echo "$timestamp,$cpu_average,$network_in_average,$network_out_average" >> "$CSV_FILE"
-
-# Verbose output to console
-echo "Metrics collected at $timestamp"
-echo "CPUUtilization: $cpu_average"
-echo "NetworkIn: $network_in_average"
-echo "NetworkOut: $network_out_average"
+echo "Metrics successfully fetched and appended to $CSV_FILE."
 
