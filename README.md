@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Cloud resource scaling is a critical feature in cloud computing, allowing dynamic resource allocation based on workload demands. This project leverages machine learning, particularly LSTM, to predict the future state of cloud resources to optimize scaling decisions. By predicting key metrics like CPU utilization, Network In, and Network Out, this project aims to improve resource allocation efficiency and reduce costs.This project involves fetching EC2 instance metrics from AWS, storing the data in a CSV file, and using it to train an LSTM model to predict future resource utilizations. The system is designed to help in predictive cloud resource scaling by analyzing historical metrics data. This can be further enhanced to scale the resources promoting efficient utilization of cloud services.
+This is the project I am currently working on. Cloud resource scaling is a critical feature in cloud computing, allowing dynamic resource allocation based on workload demands. This project leverages machine learning, particularly LSTM, to predict the future state of cloud resources to optimize scaling decisions. By predicting key metrics like CPU utilization, Network In, and Network Out, this project aims to improve resource allocation efficiency and reduce costs.This project involves fetching EC2 instance metrics from AWS, storing the data in a CSV file, and using it to train an LSTM model to predict future resource utilizations. The system is designed to help in predictive cloud resource scaling by analyzing historical metrics data. This can be further enhanced to scale the resources promoting efficient utilization of cloud services.
 
 ## Project Structure
 
